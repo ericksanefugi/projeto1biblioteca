@@ -1,5 +1,4 @@
-
-from flask import Flask
+from flask import Flask, render_template, request, redirect
 import mysql.connector
 from config import DB_CONFIG
 
@@ -13,11 +12,7 @@ def conectar():
 
 @app.route("/")
 def index():
-    return """
-    <h1>Sistema Biblioteca Escolar</h1>
-    <p>Projeto iniciado com Python, Flask e MySQL.</p>
-    <a href="/alunos">Ver alunos cadastrados</a>
-    """
+    return render_template("index.html")
 
 
 @app.route("/alunos")
@@ -35,45 +30,117 @@ def listar_alunos():
         conexao.close()
 
 
-        html = """
-        <h1>Alunos Cadastrados</h1>
-        <a href="/">Voltar</a>
-        <br><br>
-
-
-        <table border="1" cellpadding="8">
-            <tr>
-                <th>ID</th>
-                <th>Nome</th>
-                <th>Série</th>
-                <th>Turma</th>
-                <th>Telefone</th>
-            </tr>
-        """
-
-
-        for aluno in alunos:
-            html += f"""
-            <tr>
-                <td>{aluno['id_aluno']}</td>
-                <td>{aluno['nome']}</td>
-                <td>{aluno['serie']}</td>
-                <td>{aluno['turma']}</td>
-                <td>{aluno['telefone']}</td>
-            </tr>
-            """
-
-
-        html += "</table>"
-
-
-        return html
+        return render_template("alunos.html", alunos=alunos)
 
 
     except Exception as erro:
         return f"Erro ao listar alunos: {erro}"
 
 
+@app.route("/alunos/novo")
+def formulario_aluno():
+    return render_template("aluno_form.html")
+
+
+@app.route("/alunos/cadastrar", methods=["POST"])
+def cadastrar_aluno():
+    try:
+        nome = request.form["nome"]
+        serie = request.form["serie"]
+        turma = request.form["turma"]
+        telefone = request.form["telefone"]
+
+
+        conexao = conectar()
+        cursor = conexao.cursor()
+
+
+        sql = """
+            INSERT INTO aluno (nome, serie, turma, telefone)
+            VALUES (%s, %s, %s, %s)
+        """
+
+
+        valores = (nome, serie, turma, telefone)
+
+
+        cursor.execute(sql, valores)
+        conexao.commit()
+
+
+        cursor.close()
+        conexao.close()
+
+
+        return redirect("/alunos")
+
+
+    except Exception as erro:
+        return f"Erro ao cadastrar aluno: {erro}"
+
+# Rotas para livros
+@app.route("/livros")
+def listar_livros():
+    try:
+        conexao = conectar()
+        cursor = conexao.cursor(dictionary=True)
+
+
+        cursor.execute("SELECT * FROM livro")
+        livros = cursor.fetchall()
+
+
+        cursor.close()
+        conexao.close()
+
+
+        return render_template("livros.html", livros=livros)
+
+
+    except Exception as erro:
+        return f"Erro ao listar livros: {erro}"
+
+
+@app.route("/livros/novo")
+def formulario_livro():
+    return render_template("livro_form.html")
+
+
+@app.route("/livros/cadastrar", methods=["POST"])
+def cadastrar_livro():
+    try:
+        titulo = request.form["titulo"]
+        autor = request.form["autor"]
+        categoria = request.form["categoria"]
+
+
+        conexao = conectar()
+        cursor = conexao.cursor()
+
+
+        sql = """
+            INSERT INTO livro (titulo, autor, categoria, status)
+            VALUES (%s, %s, %s, %s)
+        """
+
+
+        valores = (titulo, autor, categoria, "Disponível")
+
+
+        cursor.execute(sql, valores)
+        conexao.commit()
+
+
+        cursor.close()
+        conexao.close()
+
+
+        return redirect("/livros")
+
+
+    except Exception as erro:
+        return f"Erro ao cadastrar livro: {erro}"
+
+
 if __name__ == "__main__":
     app.run(debug=True)
-    
